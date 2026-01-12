@@ -1,7 +1,7 @@
 
 import React from 'react';
-import { TabType } from '../types';
-import { HomeIcon, UsersIcon, CheckSquareIcon, BarChartIcon, SettingsIcon } from './Icons';
+import { TabType } from '../types.ts';
+import { HomeIcon, UsersIcon, CheckSquareIcon, BarChartIcon, SettingsIcon } from './Icons.tsx';
 
 interface NavItemProps {
   active: boolean;

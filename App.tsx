@@ -1,13 +1,13 @@
 
 import React, { useState, useEffect, useMemo } from 'react';
-import { TabType, Member, Task, CheckIn, AppSettings, Feeling, TaskStatus, Priority, TimeEstimate, User } from './types';
-import { Storage } from './storage';
-import { AppLayout, Card, Button } from './components/Layout';
+import { TabType, Member, Task, CheckIn, AppSettings, Feeling, TaskStatus, Priority, TimeEstimate, User } from './types.ts';
+import { Storage } from './storage.ts';
+import { AppLayout, Card, Button } from './components/Layout.tsx';
 import { 
   PlusIcon, AlertCircleIcon, EditIcon, TrashIcon, 
   ChevronRightIcon, UsersIcon, CheckSquareIcon, 
   ClockIcon, HistoryIcon, FileTextIcon, HomeIcon, BarChartIcon
-} from './components/Icons';
+} from './components/Icons.tsx';
 
 type ViewState = 'landing' | 'auth' | 'app';
 
@@ -43,7 +43,7 @@ const App: React.FC = () => {
     } else {
       if (view === 'app') setView('landing');
     }
-  }, [user]);
+  }, [user, view]);
 
   // Persistência automática
   useEffect(() => { if (user) Storage.saveMembers(user.companyId, members); }, [members, user]);
@@ -165,8 +165,6 @@ const App: React.FC = () => {
     setIsModalOpen(false);
   };
 
-  // --- VIEWS ---
-
   if (view === 'landing' || (!user && view === 'app')) {
     return (
       <div className="min-h-screen bg-slate-900 flex flex-col items-center p-6 text-white animate-fade-in overflow-y-auto pb-20">
@@ -231,7 +229,6 @@ const App: React.FC = () => {
     );
   }
 
-  // Fallback seguro se o usuário não estiver definido
   if (!user) {
     return (
       <div className="h-screen flex items-center justify-center bg-slate-50">

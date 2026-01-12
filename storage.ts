@@ -1,5 +1,5 @@
 
-import { Member, Task, CheckIn, AppSettings, User } from './types';
+import { Member, Task, CheckIn, AppSettings, User } from './types.ts';
 
 const KEYS = {
   CURRENT_USER: 'prado_session',
