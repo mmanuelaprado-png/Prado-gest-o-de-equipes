@@ -20,24 +20,28 @@ const App: React.FC = () => {
   const [members, setMembers] = useState<Member[]>([]);
   const [tasks, setTasks] = useState<Task[]>([]);
   const [checkins, setCheckins] = useState<CheckIn[]>([]);
-  const [settings, setSettings] = useState<AppSettings>({ teamName: 'Prado Gestão', notificationsEnabled: true });
+  const [settings, setSettings] = useState<AppSettings>(() => ({ teamName: 'Prado Gestão', notificationsEnabled: true }));
   
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [modalType, setModalType] = useState<'member' | 'task' | 'none'>('none');
   const [isLoading, setIsLoading] = useState(false);
   const [authError, setAuthError] = useState('');
 
-  // Sincronização de dados da empresa
+  // Sincronização de dados da empresa quando o usuário loga
   useEffect(() => {
     if (user) {
       const cid = user.companyId;
-      setMembers(Storage.getMembers(cid));
-      setTasks(Storage.getTasks(cid));
-      setCheckins(Storage.getCheckIns(cid));
-      setSettings(Storage.getSettings(cid));
-      setView('app');
+      try {
+        setMembers(Storage.getMembers(cid) || []);
+        setTasks(Storage.getTasks(cid) || []);
+        setCheckins(Storage.getCheckIns(cid) || []);
+        setSettings(Storage.getSettings(cid));
+        setView('app');
+      } catch (err) {
+        console.error("Erro ao carregar dados do Storage:", err);
+      }
     } else {
-      setView(v => v === 'app' ? 'landing' : v);
+      if (view === 'app') setView('landing');
     }
   }, [user]);
 
@@ -68,33 +72,44 @@ const App: React.FC = () => {
     setIsLoading(true);
     
     const formData = new FormData(e.target as HTMLFormElement);
-    const email = formData.get('email') as string;
-    const password = formData.get('password') as string;
-    const name = formData.get('name') as string;
+    const email = (formData.get('email') as string || '').trim();
+    const password = (formData.get('password') as string || '').trim();
+    const name = (formData.get('name') as string || '').trim();
+
+    if (!email || !password) {
+      setAuthError('Preencha todos os campos.');
+      setIsLoading(false);
+      return;
+    }
 
     setTimeout(() => {
-      const registry = Storage.getRegistry();
-      
-      if (authMode === 'register') {
-        const companyId = 'c_' + Math.random().toString(36).substr(2, 5);
-        const newUser: User = { id: 'u_' + Date.now(), email, name, plan: 'free', companyId, role: 'admin' };
-        Storage.addToRegistry({ email, password, ...newUser });
-        setUser(newUser);
-        Storage.saveSession(newUser);
-      } else {
-        const match = registry.find(r => r.email === email && r.password === password);
-        if (match) {
-          const sessionUser: User = { 
-            id: match.id, email: match.email, name: match.name, 
-            plan: match.plan || 'free', companyId: match.companyId, role: match.role 
-          };
-          setUser(sessionUser);
-          Storage.saveSession(sessionUser);
+      try {
+        const registry = Storage.getRegistry();
+        
+        if (authMode === 'register') {
+          const companyId = 'c_' + Math.random().toString(36).substr(2, 5);
+          const newUser: User = { id: 'u_' + Date.now(), email, name, plan: 'free', companyId, role: 'admin' };
+          Storage.addToRegistry({ email, password, ...newUser });
+          setUser(newUser);
+          Storage.saveSession(newUser);
         } else {
-          setAuthError('Credenciais inválidas.');
+          const match = registry.find(r => r.email === email && r.password === password);
+          if (match) {
+            const sessionUser: User = { 
+              id: match.id, email: match.email, name: match.name, 
+              plan: match.plan || 'free', companyId: match.companyId, role: match.role 
+            };
+            setUser(sessionUser);
+            Storage.saveSession(sessionUser);
+          } else {
+            setAuthError('Credenciais inválidas.');
+          }
         }
+      } catch (err) {
+        setAuthError('Erro no processamento. Tente novamente.');
+      } finally {
+        setIsLoading(false);
       }
-      setIsLoading(false);
     }, 800);
   };
 
@@ -216,8 +231,17 @@ const App: React.FC = () => {
     );
   }
 
-  // Se chegou aqui e não tem user, evita crash
-  if (!user) return null;
+  // Fallback seguro se o usuário não estiver definido
+  if (!user) {
+    return (
+      <div className="h-screen flex items-center justify-center bg-slate-50">
+        <div className="animate-pulse flex flex-col items-center">
+          <div className="w-12 h-12 bg-prado-blue rounded-full mb-4"></div>
+          <div className="h-4 w-24 bg-slate-200 rounded"></div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="max-w-md mx-auto h-full bg-slate-50">
@@ -255,7 +279,9 @@ const App: React.FC = () => {
               <h3 className="text-xs font-black text-slate-400 uppercase">Time</h3>
               {user.role === 'admin' && <button onClick={() => { setModalType('member'); setIsModalOpen(true); }} className="text-prado-gold font-black text-[10px] uppercase">Novo +</button>}
             </div>
-            {members.map(m => (
+            {members.length === 0 ? (
+               <p className="text-center text-slate-400 text-xs py-10 font-bold">Nenhum membro cadastrado.</p>
+            ) : members.map(m => (
               <Card key={m.id} className="flex items-center gap-4 py-5">
                 <div className="w-14 h-14 bg-prado-blue rounded-[20px] flex items-center justify-center text-prado-gold font-black text-xl">{m.name.charAt(0)}</div>
                 <div className="flex-1">
@@ -275,7 +301,9 @@ const App: React.FC = () => {
                 <PlusIcon className="w-6 h-6" />
               </button>
             </div>
-            {tasks.filter(t => user.role === 'admin' || t.assigneeId === user.id).map(t => (
+            {tasks.filter(t => user.role === 'admin' || t.assigneeId === user.id).length === 0 ? (
+               <p className="text-center text-slate-400 text-xs py-10 font-bold">Nenhuma tarefa pendente.</p>
+            ) : tasks.filter(t => user.role === 'admin' || t.assigneeId === user.id).map(t => (
               <Card key={t.id} className={`flex items-center justify-between ${t.status === TaskStatus.DONE ? 'opacity-60' : ''}`}>
                 <div className="flex-1 pr-4">
                   <h4 className={`font-bold text-lg leading-tight ${t.status === TaskStatus.DONE ? 'line-through text-slate-400' : 'text-slate-800'}`}>{t.title}</h4>
@@ -359,11 +387,17 @@ const App: React.FC = () => {
               ) : (
                 <>
                   <input name="title" required placeholder="Título" className="w-full bg-slate-50 p-5 rounded-2xl outline-none font-bold" />
-                  <select name="assignee" className="w-full bg-slate-50 p-5 rounded-2xl outline-none font-bold text-prado-blue">
-                    <option value={user.id}>Eu mesmo</option>
-                    {members.map(m => <option key={m.id} value={m.id}>{m.name}</option>)}
-                  </select>
-                  <input name="deadline" type="date" className="w-full bg-slate-50 p-5 rounded-2xl outline-none font-bold" />
+                  <div className="space-y-1">
+                     <p className="text-[10px] font-black text-slate-400 uppercase ml-2">Atribuir a</p>
+                     <select name="assignee" className="w-full bg-slate-50 p-5 rounded-2xl outline-none font-bold text-prado-blue">
+                        <option value={user.id}>Eu mesmo</option>
+                        {members.map(m => <option key={m.id} value={m.id}>{m.name}</option>)}
+                      </select>
+                  </div>
+                  <div className="space-y-1">
+                    <p className="text-[10px] font-black text-slate-400 uppercase ml-2">Prazo</p>
+                    <input name="deadline" type="date" defaultValue={todayStr} className="w-full bg-slate-50 p-5 rounded-2xl outline-none font-bold" />
+                  </div>
                   <Button variant="primary" type="submit" fullWidth>Confirmar Sincronização</Button>
                 </>
               )}
