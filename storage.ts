@@ -11,74 +11,127 @@ const KEYS = {
 };
 
 export const Storage = {
-  getRegistry: (): any[] => JSON.parse(localStorage.getItem(KEYS.REGISTRY) || '[]'),
+  getRegistry: (): any[] => {
+    try {
+      return JSON.parse(localStorage.getItem(KEYS.REGISTRY) || '[]');
+    } catch (e) {
+      return [];
+    }
+  },
   
   addToRegistry: (entry: any) => {
-    const reg = Storage.getRegistry();
-    if (!reg.find(r => r.email === entry.email)) {
-      reg.push(entry);
-      localStorage.setItem(KEYS.REGISTRY, JSON.stringify(reg));
+    try {
+      const reg = Storage.getRegistry();
+      if (!reg.find(r => r.email === entry.email)) {
+        reg.push(entry);
+        localStorage.setItem(KEYS.REGISTRY, JSON.stringify(reg));
+      }
+    } catch (e) {
+      console.error("Storage Error: addToRegistry", e);
     }
   },
 
   getCurrentUser: (): User | null => {
-    const data = localStorage.getItem(KEYS.CURRENT_USER);
-    return data ? JSON.parse(data) : null;
+    try {
+      const data = localStorage.getItem(KEYS.CURRENT_USER);
+      return data ? JSON.parse(data) : null;
+    } catch (e) {
+      return null;
+    }
   },
 
   saveSession: (user: User | null) => {
-    if (user) localStorage.setItem(KEYS.CURRENT_USER, JSON.stringify(user));
-    else localStorage.removeItem(KEYS.CURRENT_USER);
+    try {
+      if (user) localStorage.setItem(KEYS.CURRENT_USER, JSON.stringify(user));
+      else localStorage.removeItem(KEYS.CURRENT_USER);
+    } catch (e) {
+      console.error("Storage Error: saveSession", e);
+    }
   },
 
   getMembers: (companyId: string): Member[] => {
-    return JSON.parse(localStorage.getItem(KEYS.MEMBERS + companyId) || '[]');
+    try {
+      return JSON.parse(localStorage.getItem(KEYS.MEMBERS + companyId) || '[]');
+    } catch (e) {
+      return [];
+    }
   },
 
   saveMembers: (companyId: string, members: Member[]) => {
-    localStorage.setItem(KEYS.MEMBERS + companyId, JSON.stringify(members));
-    members.forEach(m => {
-      if (m.email && m.password) {
-        Storage.addToRegistry({
-          email: m.email,
-          password: m.password,
-          name: m.name,
-          role: 'member',
-          companyId: m.companyId,
-          id: m.id
-        });
-      }
-    });
+    try {
+      localStorage.setItem(KEYS.MEMBERS + companyId, JSON.stringify(members));
+      members.forEach(m => {
+        if (m.email && m.password) {
+          Storage.addToRegistry({
+            email: m.email,
+            password: m.password,
+            name: m.name,
+            role: 'member',
+            companyId: m.companyId,
+            id: m.id
+          });
+        }
+      });
+    } catch (e) {
+      console.error("Storage Error: saveMembers", e);
+    }
   },
 
   getTasks: (companyId: string): Task[] => {
-    return JSON.parse(localStorage.getItem(KEYS.TASKS + companyId) || '[]');
+    try {
+      return JSON.parse(localStorage.getItem(KEYS.TASKS + companyId) || '[]');
+    } catch (e) {
+      return [];
+    }
   },
 
   saveTasks: (companyId: string, tasks: Task[]) => {
-    localStorage.setItem(KEYS.TASKS + companyId, JSON.stringify(tasks));
+    try {
+      localStorage.setItem(KEYS.TASKS + companyId, JSON.stringify(tasks));
+    } catch (e) {
+      console.error("Storage Error: saveTasks", e);
+    }
   },
 
   getCheckIns: (companyId: string): CheckIn[] => {
-    return JSON.parse(localStorage.getItem(KEYS.CHECKINS + companyId) || '[]');
+    try {
+      return JSON.parse(localStorage.getItem(KEYS.CHECKINS + companyId) || '[]');
+    } catch (e) {
+      return [];
+    }
   },
 
   saveCheckIns: (companyId: string, checkins: CheckIn[]) => {
-    localStorage.setItem(KEYS.CHECKINS + companyId, JSON.stringify(checkins));
+    try {
+      localStorage.setItem(KEYS.CHECKINS + companyId, JSON.stringify(checkins));
+    } catch (e) {
+      console.error("Storage Error: saveCheckIns", e);
+    }
   },
 
   getSettings: (companyId: string): AppSettings => {
-    return JSON.parse(localStorage.getItem(KEYS.SETTINGS + companyId) || JSON.stringify({
+    try {
+      const saved = localStorage.getItem(KEYS.SETTINGS + companyId);
+      if (saved) return JSON.parse(saved);
+    } catch (e) {}
+    
+    return {
       teamName: 'Prado Gestão',
       notificationsEnabled: true
-    }));
+    };
   },
 
   saveSettings: (companyId: string, settings: AppSettings) => {
-    localStorage.setItem(KEYS.SETTINGS + companyId, JSON.stringify(settings));
+    try {
+      localStorage.setItem(KEYS.SETTINGS + companyId, JSON.stringify(settings));
+    } catch (e) {
+      console.error("Storage Error: saveSettings", e);
+    }
   },
 
   logout: () => {
-    localStorage.removeItem(KEYS.CURRENT_USER);
+    try {
+      localStorage.removeItem(KEYS.CURRENT_USER);
+    } catch (e) {}
   }
 };
